@@ -31,11 +31,10 @@ type Options struct {
 	Timeout time.Duration
 	// Jobs is how many groups are compiled and run at once.
 	Jobs int
-	// StopAtFailure halts at the first failing test and truncates the report
-	// there, the way the moulinette does. It forces the groups to run in
-	// report order, one at a time, so "first" means the same thing it does
-	// in the real report.
-	StopAtFailure bool
+	// RunAll keeps going after a failure instead of stopping there. The
+	// moulinette stops, so that is the default; this is for when you would
+	// rather see everything that is broken in one pass.
+	RunAll bool
 	// Progress is called as groups finish, for a live display.
 	Progress func(done, total int, group string)
 }
@@ -125,8 +124,8 @@ func Run(project *spec.Project, dir string, opts Options) (*result.Report, []str
 		rep.Groups[i] = &result.Group{Spec: g}
 	}
 
-	if opts.StopAtFailure {
-		runSequentiallyUntilFailure(b, rep, hasBonus, opts)
+	if !opts.RunAll {
+		runUntilFailure(b, rep, hasBonus, opts)
 		return rep, notes, nil
 	}
 
@@ -167,35 +166,88 @@ func Run(project *spec.Project, dir string, opts Options) (*result.Report, []str
 	return rep, notes, nil
 }
 
-// runSequentiallyUntilFailure walks the groups in report order and stops at
-// the first test that does not pass, dropping everything after it. That is
-// what the moulinette shows: the run ends where the problem is.
-func runSequentiallyUntilFailure(b *build.Builder, rep *result.Report, hasBonus bool, opts Options) {
+// runUntilFailure walks the groups in subject order and stops at the first
+// test that does not pass, dropping everything after it. That is what the
+// moulinette shows: the run ends where the problem is.
+//
+// Compilation still happens in parallel up front, because it is the slow
+// part and it does not change where the first failure lands.
+func runUntilFailure(b *build.Builder, rep *result.Report, hasBonus bool, opts Options) {
+	compiled := compileAll(b, rep, hasBonus, opts)
+
 	for i, rg := range rep.Groups {
-		if rg.Spec.Bonus && !hasBonus {
-			rg.Compilation = result.Skipped
-			rg.Cases = skippedCases(rg.Spec)
+		if rg.Compilation == result.Skipped {
 			continue
 		}
-		runGroup(b, rg, opts.Timeout, b.Run)
-		if opts.Progress != nil {
-			opts.Progress(i+1, len(rep.Groups), rg.Spec.Name)
-		}
-
 		if rg.Compilation != result.OK {
 			rep.Groups = rep.Groups[:i+1]
 			return
 		}
+
+		rg.Cases = runner.New(opts.Timeout, b.Run).RunGroup(compiled[i], rg.Spec)
+		if opts.Progress != nil {
+			opts.Progress(i+1, len(rep.Groups), rg.Spec.Name)
+		}
+
 		for j, c := range rg.Cases {
 			if c.Status.Passed() || c.Status == result.Skipped {
 				continue
 			}
-			// Keep the failing case: it is the one the student needs to see.
+			// Keep the failing case: it is the one to look at.
 			rg.Cases = rg.Cases[:j+1]
 			rep.Groups = rep.Groups[:i+1]
 			return
 		}
 	}
+}
+
+// compileAll builds every group at once and returns the executables, indexed
+// like rep.Groups. A group that fails to build has its status set here and an
+// empty path.
+func compileAll(b *build.Builder, rep *result.Report, hasBonus bool, opts Options) []string {
+	jobs := opts.Jobs
+	if jobs <= 0 {
+		jobs = runtime.NumCPU()
+	}
+	exes := make([]string, len(rep.Groups))
+	sem := make(chan struct{}, jobs)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	built := 0
+
+	for i := range rep.Groups {
+		rg := rep.Groups[i]
+		if rg.Spec.Bonus && !hasBonus {
+			rg.Compilation = result.Skipped
+			rg.Cases = skippedCases(rg.Spec)
+			continue
+		}
+		wg.Add(1)
+		go func(i int, rg *result.Group) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			exe, log, err := b.CompileGroup(rg.Spec)
+			rg.CompileLog = log
+			if err != nil {
+				rg.Compilation = result.KO
+				rg.Cases = nil
+			} else {
+				rg.Compilation = result.OK
+				exes[i] = exe
+			}
+
+			mu.Lock()
+			built++
+			if opts.Progress != nil {
+				opts.Progress(built, len(rep.Groups), "compiling "+rg.Spec.Name)
+			}
+			mu.Unlock()
+		}(i, rg)
+	}
+	wg.Wait()
+	return exes
 }
 
 // runGroup compiles and executes a single group.

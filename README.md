@@ -65,35 +65,21 @@ Common_Core-Project-C-Libft
   ✓ Expected files
   ✓ Allowed functions
 
-  ⏱ ft_split               2/5
-      ⏱ ft_split_test__#1
-        the test did not finish within 5s (infinite loop?)
-      ⏱ ft_split_test__#2
-        the test did not finish within 5s (infinite loop?)
-      ⏱ ft_split_test__#5
-        the test did not finish within 5s (infinite loop?)
   ✗ ft_itoa                9/10
       ✗ ft_itoa_test__#5
         ft_itoa(-2147483648)
           expected: "-2147483648"
           got:      "-("
-  ✗ ft_putnbr_fd           4/5
-      ✗ ft_putnbr_fd_test__#5
-        ft_putnbr_fd(-2147483648, 1) wrote
-          expected: "-2147483648"
-          got:      "-("
 
-  FAIL  217/222
+  FAIL  138/139
 
   report: moulinette_report.md
 ```
 
-That is a real run. Every failure names the call and puts expected against
-got — not `3.KO`. And note that `ft_split` looping forever cost it three test
-cases, not the run.
-
-Want the moulinette's behaviour exactly? `--stop` ends the run at the first
-failing test and cuts the report there.
+Like the moulinette, it walks the subject in order and **stops at the first
+function that fails** — there is no point grading the rest until that one is
+fixed. Every failure names the call and puts expected against got, not
+`3.KO`. Pass `--all` to see everything that is broken in one pass instead.
 
 ## Why not the tester you already know
 
@@ -109,7 +95,8 @@ failing test and cuts the report there.
 ## Usage
 
 ```bash
-42tester .                    # test whatever is here
+42tester .                    # test whatever is here, stop at the first failure
+42tester . --all              # do not stop, show everything that is broken
 42tester ~/ft_printf -v       # show every test, not just failures
 42tester . --leaks            # also hunt memory leaks
 42tester -p gnl ~/some/dir    # force the project if detection is wrong
@@ -120,7 +107,7 @@ failing test and cuts the report there.
 |---|---|
 | `-v` | List every test, not just the failures |
 | `-p <project>` | Force `libft`, `printf` or `gnl` |
-| `--stop` | Stop at the first failing test and cut the report there, like the moulinette |
+| `--all` | Keep going after a failure instead of stopping there like the moulinette |
 | `-o <file>` | Where to write the report (default `moulinette_report.md`) |
 | `--no-report` | Do not write the report file |
 | `--json <file>` | Machine-readable report, for CI |
@@ -149,6 +136,11 @@ Then the tests, one executable per group and one process per case.
 | libft | 43 | 222 |
 | ft_printf | 6 | 63 |
 | get_next_line | 13 | 44 |
+
+They run in the subject's order, not alphabetically — for **libft** that is
+the 23 libc functions of part 1, then the 11 additional ones of part 2, then
+the 9 list functions of the bonus, 43 in all. That order is the one the real
+reports use, which is what lets the output be diffed against them.
 
 **ft_printf** is compared against your system's `printf` — the bytes written
 *and* the return value. Using the C library as the reference is what makes
