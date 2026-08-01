@@ -15,6 +15,31 @@ That is the whole interface. It works out which project is in the directory.
 
 ---
 
+## Status: young, read this before trusting it
+
+This was written with Claude, in one sitting, and has not yet been run on the
+author's own projects. Being specific about that matters more than the label,
+because you are going to decide whether to submit based on what it tells you.
+
+**What is checked.** Reference implementations of all three projects were
+written and graded with it: libft 222/222, get_next_line 44/44, ft_printf
+55/63 — the eight being a Windows `%p` quirk described under
+[Limits](#limits-stated-plainly). Deliberately broken versions were then
+checked to fail in the right places, including a segfault, an infinite loop
+and a forbidden `printf`. The passing report is diffed against three real
+moulinette reports by a test in the repository.
+
+**What is not.** It has never run on macOS or Linux — only on Windows, which
+is the one platform nobody at 42 is graded on. It has never seen a real
+student submission. `--leaks` has never been executed at all.
+
+So: use it to find bugs, not to conclude you have none. A failure points at
+something worth looking at. A clean run is encouraging, not a guarantee.
+Issues are welcome, particularly anything that turns out to be this tool's
+fault rather than your code's.
+
+---
+
 ## Quick start
 
 ```bash
