@@ -116,24 +116,20 @@ func Run(project *spec.Project, dir string, opts Options) (*result.Report, []str
 	// `make` has produced it.
 	objects := objectsToInspect(b)
 
-	// A function can be declared in the header and still be missing from the
-	// library, which is what an empty source file looks like. Fold that into
-	// the same line as the file check: the report has room for two.
-	if impl := prereq.Implemented(tool.NM, objects, project); !impl.Status.Passed() {
-		rep.Prerequisites[0] = impl
-		rep.Aborted = true
-		rep.AbortReason = impl.Detail
-		rep.Prerequisites = append(rep.Prerequisites,
-			result.Check{Name: "Allowed functions", Status: result.Skipped})
-		return rep, notes, nil
-	}
+	// Functions that are not written yet fail at their own place in the
+	// sequence rather than all at once up front, so a run always ends on the
+	// next thing to do.
+	missing := prereq.MissingFunctions(dir, tool.NM, objects, project)
 
 	rep.Prerequisites = append(rep.Prerequisites,
 		prereq.AllowedFunctions(tool.NM, objects, project))
 
-	groups := project.Groups
+	// The report's own groups first, so its section order is preserved, then
+	// what the subject demands beyond it.
+	groups := append([]spec.Group{}, project.Groups...)
+	groups = append(groups, project.RequiredGroups...)
 	if opts.Extra {
-		groups = append(append([]spec.Group{}, groups...), project.ExtraGroups...)
+		groups = append(groups, project.ExtraGroups...)
 	}
 
 	rep.Groups = make([]*result.Group, len(groups))
@@ -142,7 +138,7 @@ func Run(project *spec.Project, dir string, opts Options) (*result.Report, []str
 	}
 
 	if !opts.RunAll {
-		runUntilFailure(b, rep, opts)
+		runUntilFailure(b, rep, missing, opts)
 		return rep, notes, nil
 	}
 
@@ -163,7 +159,11 @@ func Run(project *spec.Project, dir string, opts Options) (*result.Report, []str
 			defer func() { <-sem }()
 
 			rg := rep.Groups[i]
-			runGroup(b, rg, opts.Timeout, b.Run)
+			if reason, ok := missing[rg.Spec.Name]; ok {
+				markNotWritten(rg, reason)
+			} else {
+				runGroup(b, rg, opts.Timeout, b.Run)
+			}
 
 			mu.Lock()
 			done++
@@ -184,8 +184,8 @@ func Run(project *spec.Project, dir string, opts Options) (*result.Report, []str
 //
 // Compilation still happens in parallel up front, because it is the slow
 // part and it does not change where the first failure lands.
-func runUntilFailure(b *build.Builder, rep *result.Report, opts Options) {
-	compiled := compileAll(b, rep, opts)
+func runUntilFailure(b *build.Builder, rep *result.Report, missing map[string]string, opts Options) {
+	compiled := compileAll(b, rep, missing, opts)
 
 	for i, rg := range rep.Groups {
 		if rg.Compilation == result.Skipped {
@@ -216,7 +216,7 @@ func runUntilFailure(b *build.Builder, rep *result.Report, opts Options) {
 // compileAll builds every group at once and returns the executables, indexed
 // like rep.Groups. A group that fails to build has its status set here and an
 // empty path.
-func compileAll(b *build.Builder, rep *result.Report, opts Options) []string {
+func compileAll(b *build.Builder, rep *result.Report, missing map[string]string, opts Options) []string {
 	jobs := opts.Jobs
 	if jobs <= 0 {
 		jobs = runtime.NumCPU()
@@ -229,6 +229,10 @@ func compileAll(b *build.Builder, rep *result.Report, opts Options) []string {
 
 	for i := range rep.Groups {
 		rg := rep.Groups[i]
+		if reason, ok := missing[rg.Spec.Name]; ok {
+			markNotWritten(rg, reason)
+			continue
+		}
 		wg.Add(1)
 		go func(i int, rg *result.Group) {
 			defer wg.Done()
@@ -297,4 +301,16 @@ func objectsToInspect(b *build.Builder) []string {
 		}
 	}
 	return objs
+}
+
+// markNotWritten fails a group whose function does not exist yet, without
+// trying to compile a test that cannot possibly link.
+func markNotWritten(rg *result.Group, reason string) {
+	rg.Compilation = result.KO
+	rg.CompileLog = reason
+	rg.Cases = skippedCases(rg.Spec)
+	for i := range rg.Cases {
+		rg.Cases[i].Status = result.KO
+		rg.Cases[i].Detail = reason
+	}
 }

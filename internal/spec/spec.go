@@ -26,6 +26,10 @@ type Group struct {
 	// CFlags are extra compiler flags for this group only (get_next_line
 	// compiles the same sources once per BUFFER_SIZE).
 	CFlags []string
+	// NoBufferSize compiles get_next_line without any -D BUFFER_SIZE at all.
+	// The subject requires the project to build both ways, so the header has
+	// to carry a default of its own.
+	NoBufferSize bool
 }
 
 // TestName returns the label of case n (1-based) as the moulinette writes it.
@@ -57,11 +61,16 @@ type Project struct {
 	Sources []string
 	// Headers are include files needed to compile the harness.
 	Headers []string
-	// Groups are the test sections, in report order.
+	// Groups are the sections of the real moulinette report, in its order.
+	// Rendering these alone has to reproduce that report exactly, which is
+	// what internal/report/markdown_test.go checks.
 	Groups []Group
-	// ExtraGroups are tests the real moulinette does not run but that the
-	// subject mandates or that evaluators check by hand. They are off by
-	// default so the report stays faithful; --extra turns them on.
+	// RequiredGroups cover things the subject demands that the report we
+	// have shows no group for. They run by default: a tester that skips a
+	// mandatory conversion is broken, whatever the report looks like.
+	RequiredGroups []Group
+	// ExtraGroups are genuinely optional: behaviour the subject calls
+	// undefined, or that only an evaluator would try. --extra turns them on.
 	ExtraGroups []Group
 }
 

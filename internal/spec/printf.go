@@ -2,9 +2,10 @@ package spec
 
 // Printf mirrors docs/moulinette/printf.md: 6 groups, 63 cases.
 //
-// Note the real report has no group for %d, %i or %u even though the subject
-// requires them. Those live in ExtraGroups and only run with --extra, so the
-// default output stays a faithful copy of the moulinette.
+// The subject asks for the conversions cspdiuxX%, but the report has groups
+// only for c, s, p, x, X and %. The missing three are in RequiredGroups: the
+// six report groups still render byte for byte, and %d, %i and %u are still
+// graded.
 func Printf() *Project {
 	return &Project{
 		ID:         "printf",
@@ -29,9 +30,13 @@ func Printf() *Project {
 			simple("ft_printf_hex_upper", 15, "printf/hex_upper.c"),
 			simple("ft_printf_percent", 5, "printf/percent.c"),
 		},
-		ExtraGroups: []Group{
+		// The subject requires cspdiuxX%, so %d, %i and %u are graded even
+		// though the report we have shows no group for them.
+		RequiredGroups: []Group{
 			simple("ft_printf_int", 15, "printf/int.c"),
 			simple("ft_printf_unsigned", 12, "printf/unsigned.c"),
+		},
+		ExtraGroups: []Group{
 			simple("ft_printf_mixed", 10, "printf/mixed.c"),
 		},
 	}

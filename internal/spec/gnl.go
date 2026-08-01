@@ -34,7 +34,20 @@ func GetNextLine() *Project {
 			{Name: "stdin_test", Prefix: "stdin", Cases: 3, Source: "gnl/stdin.c"},
 			simple("invalid_fd", 1, "gnl/invalid_fd.c"),
 		},
+		// "We must be able to compile this project with and without the -D
+		// BUFFER_SIZE flag": the header has to carry a default of its own.
+		RequiredGroups: []Group{
+			{
+				Name:         "default_buffer_size",
+				Prefix:       "default_buffer_size",
+				Cases:        3,
+				Source:       "gnl/default_buffer.c",
+				NoBufferSize: true,
+			},
+		},
 		ExtraGroups: []Group{
+			// Neither multiple descriptors nor binary files are in the
+			// mandatory part, and the subject calls the latter undefined.
 			simple("multiple_fd", 4, "gnl/multiple_fd.c"),
 			simple("binary_file", 3, "gnl/binary_file.c"),
 			bufSize("buffer_size_9999", 9999, 3),

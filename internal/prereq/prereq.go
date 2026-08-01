@@ -51,75 +51,51 @@ func ExpectedFiles(dir string, p *spec.Project) result.Check {
 		}
 	}
 
-	if undeclared := undeclared(dir, p); len(undeclared) > 0 {
-		return result.Check{
-			Name:   checkName,
-			Status: result.KO,
-			Detail: fmt.Sprintf("%d function(s) the subject asks for are not declared in %s:\n  %s",
-				len(undeclared), strings.Join(p.Headers, ", "), strings.Join(undeclared, ", ")),
-		}
-	}
 	return result.Check{Name: checkName, Status: result.OK}
 }
 
-// undeclared returns the expected functions that no header declares.
-func undeclared(dir string, p *spec.Project) []string {
-	want := p.MandatoryFuncs
-	if len(want) == 0 || len(p.Headers) == 0 {
-		return nil
+// MissingFunctions maps each expected function that is not usable yet to the
+// reason why, ready to be shown as that function's own failure.
+//
+// It deliberately does not abort the run. Students write these one at a time,
+// so a function that does not exist yet belongs at its own place in the
+// sequence, after everything before it has been graded, rather than as a wall
+// of names before any test has run.
+func MissingFunctions(dir, nm string, objects []string, p *spec.Project) map[string]string {
+	out := map[string]string{}
+	if len(p.MandatoryFuncs) == 0 {
+		return out
 	}
 
 	var headers string
 	for _, h := range p.Headers {
-		data, err := os.ReadFile(filepath.Join(dir, h))
-		if err != nil {
-			continue
+		if data, err := os.ReadFile(filepath.Join(dir, h)); err == nil {
+			headers += string(data)
 		}
-		headers += string(data)
 	}
 
-	var out []string
-	for _, name := range want {
+	var defined map[string]bool
+	if nm != "" && len(objects) > 0 {
+		if d, _, err := symbols(nm, objects); err == nil {
+			defined = d
+		}
+	}
+
+	for _, name := range p.MandatoryFuncs {
 		// The name has to be followed by an opening parenthesis, so a
 		// mention in a comment or a differently spelled function does not
 		// count as a declaration.
-		if !regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\s*\(`).MatchString(headers) {
-			out = append(out, name)
+		declared := regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\s*\(`).MatchString(headers)
+		switch {
+		case !declared:
+			out[name] = fmt.Sprintf("%s is not declared in %s.\nThe subject gives the prototype; add it to the header.",
+				name, strings.Join(p.Headers, " or "))
+		case defined != nil && !defined[name]:
+			out[name] = fmt.Sprintf("%s is declared but never defined: nothing in %s provides it.\nThe source file is empty, or it is not built into the library.",
+				name, p.Library)
 		}
 	}
 	return out
-}
-
-// Implemented checks that the compiled code really defines every expected
-// function. This is what catches a source file that exists but is empty: the
-// header declares it, the archive does not contain it.
-func Implemented(nm string, objects []string, p *spec.Project) result.Check {
-	want := p.MandatoryFuncs
-	if nm == "" || len(objects) == 0 || len(want) == 0 {
-		return result.Check{Name: checkName, Status: result.OK}
-	}
-
-	defined, _, err := symbols(nm, objects)
-	if err != nil {
-		return result.Check{Name: checkName, Status: result.OK}
-	}
-
-	var out []string
-	for _, name := range want {
-		if !defined[name] {
-			out = append(out, name)
-		}
-	}
-	if len(out) == 0 {
-		return result.Check{Name: checkName, Status: result.OK}
-	}
-	sort.Strings(out)
-	return result.Check{
-		Name:   checkName,
-		Status: result.KO,
-		Detail: fmt.Sprintf("%d function(s) are declared but never defined; the source file is empty or does not compile into the library:\n  %s",
-			len(out), strings.Join(out, ", ")),
-	}
 }
 
 // compilerInternals are symbols the toolchain emits on its own. They are not

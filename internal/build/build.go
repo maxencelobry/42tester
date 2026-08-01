@@ -193,7 +193,9 @@ func (b *Builder) CompileGroup(g spec.Group) (string, string, error) {
 	args = append(args, g.CFlags...)
 	// get_next_line sources need a BUFFER_SIZE even in groups that do not
 	// vary it; the subject's default is unspecified, 42 is the usual value.
-	if b.Project.ID == "gnl" && !hasDefine(g.CFlags, "BUFFER_SIZE") {
+	// One group deliberately passes nothing, to check the header carries a
+	// default of its own as the subject requires.
+	if b.Project.ID == "gnl" && !g.NoBufferSize && !hasDefine(g.CFlags, "BUFFER_SIZE") {
 		args = append(args, "-DBUFFER_SIZE=42")
 	}
 	args = append(args,
