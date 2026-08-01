@@ -4,3 +4,7 @@
 moulinette_report.md
 report.json
 .42tester_*
+
+# The subjects are copyright 42 and must not be committed here.
+docs/subject/
+*.pdf
