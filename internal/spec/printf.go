@@ -18,8 +18,9 @@ func Printf() *Project {
 			"malloc", "free", "write",
 			"va_start", "va_arg", "va_copy", "va_end",
 		},
-		Library: "libftprintf.a",
-		Headers: []string{"ft_printf.h"},
+		MandatoryFuncs: []string{"ft_printf"},
+		Library:        "libftprintf.a",
+		Headers:        []string{"ft_printf.h"},
 		Groups: []Group{
 			simple("ft_printf_char", 10, "printf/char.c"),
 			simple("ft_printf_string", 10, "printf/string.c"),

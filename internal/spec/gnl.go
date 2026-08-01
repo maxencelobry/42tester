@@ -14,9 +14,10 @@ func GetNextLine() *Project {
 			"get_next_line_utils.c",
 			"get_next_line.h",
 		},
-		AllowedFuncs: []string{"read", "malloc", "free"},
-		Sources:      []string{"get_next_line.c", "get_next_line_utils.c"},
-		Headers:      []string{"get_next_line.h"},
+		AllowedFuncs:   []string{"read", "malloc", "free"},
+		MandatoryFuncs: []string{"get_next_line"},
+		Sources:        []string{"get_next_line.c", "get_next_line_utils.c"},
+		Headers:        []string{"get_next_line.h"},
 		Groups: []Group{
 			// The heading already ends in _test, so the label is not doubled.
 			{Name: "simple_test", Prefix: "simple", Cases: 5, Source: "gnl/simple.c"},

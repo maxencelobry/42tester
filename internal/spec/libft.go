@@ -1,10 +1,11 @@
 package spec
 
-// Libft mirrors docs/moulinette/libft.md: 43 groups, 232 cases.
+// Libft mirrors docs/moulinette/libft.md: 43 groups, 222 cases.
 //
-// The lst* groups appear in the same flow as the rest in the real report,
-// but they only exist once the bonus part is turned in, so they are flagged
-// as bonus and skipped when the archive has no ft_lst* symbols.
+// The nine ft_lst* functions are treated as mandatory, like every other
+// group. The real report lists them in the same flow as the rest, with the
+// same heading and the same "Valid tests" line, and never uses the word
+// bonus; there is nothing in it that sets them apart.
 func Libft() *Project {
 	return &Project{
 		ID:         "libft",
@@ -14,10 +15,22 @@ func Libft() *Project {
 			"Makefile",
 			"libft.h",
 		},
-		BonusFiles:   []string{"ft_lstnew_bonus.c", "ft_lstnew.c"},
 		AllowedFuncs: []string{"malloc", "free", "write"},
-		Library:      "libft.a",
-		Headers:      []string{"libft.h"},
+		MandatoryFuncs: []string{
+			"ft_isalpha", "ft_isdigit", "ft_isalnum", "ft_isascii", "ft_isprint",
+			"ft_strlen", "ft_memset", "ft_bzero", "ft_memcpy", "ft_memmove",
+			"ft_strlcpy", "ft_strlcat", "ft_toupper", "ft_tolower", "ft_strchr",
+			"ft_strrchr", "ft_strncmp", "ft_memchr", "ft_memcmp", "ft_strnstr",
+			"ft_atoi", "ft_calloc", "ft_strdup",
+			"ft_substr", "ft_strjoin", "ft_strtrim", "ft_split", "ft_itoa",
+			"ft_strmapi", "ft_striteri",
+			"ft_putchar_fd", "ft_putstr_fd", "ft_putendl_fd", "ft_putnbr_fd",
+			"ft_lstnew", "ft_lstadd_front", "ft_lstsize", "ft_lstlast",
+			"ft_lstadd_back", "ft_lstdelone", "ft_lstclear", "ft_lstiter",
+			"ft_lstmap",
+		},
+		Library: "libft.a",
+		Headers: []string{"libft.h"},
 		Groups: []Group{
 			simple("ft_isalpha", 5, "libft/ft_isalpha.c"),
 			simple("ft_isdigit", 5, "libft/ft_isdigit.c"),
@@ -53,21 +66,15 @@ func Libft() *Project {
 			simple("ft_putstr_fd", 3, "libft/ft_putstr_fd.c"),
 			simple("ft_putendl_fd", 3, "libft/ft_putendl_fd.c"),
 			simple("ft_putnbr_fd", 5, "libft/ft_putnbr_fd.c"),
-			bonus("ft_lstnew", 5, "libft/ft_lstnew.c"),
-			bonus("ft_lstadd_front", 5, "libft/ft_lstadd_front.c"),
-			bonus("ft_lstsize", 5, "libft/ft_lstsize.c"),
-			bonus("ft_lstlast", 5, "libft/ft_lstlast.c"),
-			bonus("ft_lstadd_back", 5, "libft/ft_lstadd_back.c"),
-			bonus("ft_lstdelone", 5, "libft/ft_lstdelone.c"),
-			bonus("ft_lstclear", 5, "libft/ft_lstclear.c"),
-			bonus("ft_lstiter", 5, "libft/ft_lstiter.c"),
-			bonus("ft_lstmap", 5, "libft/ft_lstmap.c"),
+			simple("ft_lstnew", 5, "libft/ft_lstnew.c"),
+			simple("ft_lstadd_front", 5, "libft/ft_lstadd_front.c"),
+			simple("ft_lstsize", 5, "libft/ft_lstsize.c"),
+			simple("ft_lstlast", 5, "libft/ft_lstlast.c"),
+			simple("ft_lstadd_back", 5, "libft/ft_lstadd_back.c"),
+			simple("ft_lstdelone", 5, "libft/ft_lstdelone.c"),
+			simple("ft_lstclear", 5, "libft/ft_lstclear.c"),
+			simple("ft_lstiter", 5, "libft/ft_lstiter.c"),
+			simple("ft_lstmap", 5, "libft/ft_lstmap.c"),
 		},
 	}
-}
-
-func bonus(name string, cases int, source string) Group {
-	g := simple(name, cases, source)
-	g.Bonus = true
-	return g
 }

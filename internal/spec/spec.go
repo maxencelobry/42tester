@@ -26,8 +26,6 @@ type Group struct {
 	// CFlags are extra compiler flags for this group only (get_next_line
 	// compiles the same sources once per BUFFER_SIZE).
 	CFlags []string
-	// Bonus marks groups that only exist if the student turned in the bonus.
-	Bonus bool
 }
 
 // TestName returns the label of case n (1-based) as the moulinette writes it.
@@ -46,10 +44,12 @@ type Project struct {
 	Assignment string
 	// ExpectedFiles must all be present in the submission.
 	ExpectedFiles []string
-	// BonusFiles are looked up to decide whether bonus groups run.
-	BonusFiles []string
 	// AllowedFuncs is the set of external symbols the subject permits.
 	AllowedFuncs []string
+	// MandatoryFuncs must each be declared in the header and defined in the
+	// compiled code. The subject gives their exact names, so a missing
+	// prototype or an empty source file is a failure and not a detail.
+	MandatoryFuncs []string
 	// Library is the archive `make` is expected to produce, if any.
 	Library string
 	// Sources lists source files linked directly instead of via a library
@@ -92,6 +92,16 @@ func Lookup(name string) (*Project, error) {
 		}
 	}
 	return nil, fmt.Errorf("unknown project %q (known: libft, printf, gnl)", name)
+}
+
+// FunctionNames collects the names of the groups, which for libft are the
+// functions themselves.
+func FunctionNames(groups []Group) []string {
+	names := make([]string, 0, len(groups))
+	for _, g := range groups {
+		names = append(names, g.Name)
+	}
+	return names
 }
 
 // simple is the common case where the report prefix equals the group name.

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -17,7 +18,17 @@ import (
 	"tester42/internal/spec"
 )
 
-// ExpectedFiles reports whether every mandatory file is present.
+// checkName is the label the moulinette report uses for this line. The report
+// has exactly two prerequisites, so everything about the submission being
+// complete is folded in here rather than added as a third.
+const checkName = "Expected files"
+
+// ExpectedFiles reports whether every mandatory file is present and every
+// function the subject names is declared in the header.
+//
+// The subject gives the prototypes, so a function that is missing from the
+// header is not a detail to discover later through a compiler error: the
+// submission does not match what was asked.
 func ExpectedFiles(dir string, p *spec.Project) result.Check {
 	var missing []string
 	for _, f := range p.ExpectedFiles {
@@ -32,15 +43,83 @@ func ExpectedFiles(dir string, p *spec.Project) result.Check {
 			missing = append(missing, "*.c (no source file found)")
 		}
 	}
-
 	if len(missing) > 0 {
 		return result.Check{
-			Name:   "Expected files",
+			Name:   checkName,
 			Status: result.KO,
-			Detail: "missing: " + strings.Join(missing, ", "),
+			Detail: "missing file(s): " + strings.Join(missing, ", "),
 		}
 	}
-	return result.Check{Name: "Expected files", Status: result.OK}
+
+	if undeclared := undeclared(dir, p); len(undeclared) > 0 {
+		return result.Check{
+			Name:   checkName,
+			Status: result.KO,
+			Detail: fmt.Sprintf("%d function(s) the subject asks for are not declared in %s:\n  %s",
+				len(undeclared), strings.Join(p.Headers, ", "), strings.Join(undeclared, ", ")),
+		}
+	}
+	return result.Check{Name: checkName, Status: result.OK}
+}
+
+// undeclared returns the expected functions that no header declares.
+func undeclared(dir string, p *spec.Project) []string {
+	want := p.MandatoryFuncs
+	if len(want) == 0 || len(p.Headers) == 0 {
+		return nil
+	}
+
+	var headers string
+	for _, h := range p.Headers {
+		data, err := os.ReadFile(filepath.Join(dir, h))
+		if err != nil {
+			continue
+		}
+		headers += string(data)
+	}
+
+	var out []string
+	for _, name := range want {
+		// The name has to be followed by an opening parenthesis, so a
+		// mention in a comment or a differently spelled function does not
+		// count as a declaration.
+		if !regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\s*\(`).MatchString(headers) {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// Implemented checks that the compiled code really defines every expected
+// function. This is what catches a source file that exists but is empty: the
+// header declares it, the archive does not contain it.
+func Implemented(nm string, objects []string, p *spec.Project) result.Check {
+	want := p.MandatoryFuncs
+	if nm == "" || len(objects) == 0 || len(want) == 0 {
+		return result.Check{Name: checkName, Status: result.OK}
+	}
+
+	defined, _, err := symbols(nm, objects)
+	if err != nil {
+		return result.Check{Name: checkName, Status: result.OK}
+	}
+
+	var out []string
+	for _, name := range want {
+		if !defined[name] {
+			out = append(out, name)
+		}
+	}
+	if len(out) == 0 {
+		return result.Check{Name: checkName, Status: result.OK}
+	}
+	sort.Strings(out)
+	return result.Check{
+		Name:   checkName,
+		Status: result.KO,
+		Detail: fmt.Sprintf("%d function(s) are declared but never defined; the source file is empty or does not compile into the library:\n  %s",
+			len(out), strings.Join(out, ", ")),
+	}
 }
 
 // compilerInternals are symbols the toolchain emits on its own. They are not
