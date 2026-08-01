@@ -2,13 +2,13 @@
 
 static void	expect(int n)
 {
-	char	want[16];
-	char	call[40];
-	char	shown[64];
+	char	want[T_DECIMAL_CHARS(int)];
+	char	call[T_DECIMAL_CHARS(int) + 32];
+	char	shown[T_DECIMAL_CHARS(int) + 32];
 	size_t	len;
 	char	*got;
 
-	sprintf(want, "%d", n);
+	snprintf(want, sizeof(want), "%d", n);
 	snprintf(call, sizeof(call), "ft_putnbr_fd(%d, 1) wrote", n);
 	t_capture_start(1);
 	ft_putnbr_fd(n, 1);

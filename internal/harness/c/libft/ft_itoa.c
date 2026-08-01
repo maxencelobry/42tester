@@ -4,12 +4,12 @@
  * and makes the reference obvious. */
 static void	expect(int n)
 {
-	char	want[16];
-	char	call[32];
-	char	shown[64];
+	char	want[T_DECIMAL_CHARS(int)];
+	char	call[T_DECIMAL_CHARS(int) + 16];
+	char	shown[T_DECIMAL_CHARS(int) + 16];
 	char	*got;
 
-	sprintf(want, "%d", n);
+	snprintf(want, sizeof(want), "%d", n);
 	snprintf(call, sizeof(call), "ft_itoa(%d)", n);
 	got = ft_itoa(n);
 	if (got == NULL || strcmp(got, want) != 0)

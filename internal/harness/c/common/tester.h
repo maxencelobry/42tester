@@ -23,6 +23,12 @@
 /* Longest failure message, expected value or actual value we carry. */
 # define T_MSG_MAX 1024
 
+/* Characters needed to hold the decimal form of any value of a type: at most
+ * three digits per byte, plus a sign and a terminator. Sizing a buffer from
+ * the type rather than from what int happens to be on the machine in front
+ * of you is the difference between correct and lucky. */
+# define T_DECIMAL_CHARS(type) (3 * sizeof(type) + 2)
+
 /* ---- lifecycle ---------------------------------------------------------- */
 
 void	t_init(int argc, char **argv);

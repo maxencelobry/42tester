@@ -16,6 +16,7 @@
 # include <stdlib.h>
 # include <string.h>
 # include <limits.h>
+# include <stdint.h>
 
 static T_UNUSED void	t_cmp_printf(const char *expr, int got, char *gs, size_t gl,
 				int want, char *ws, size_t wl)

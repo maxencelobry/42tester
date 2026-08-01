@@ -47,8 +47,12 @@ int	main(int argc, char **argv)
 	}
 	CASE(8)
 	{
-		/* The widest value a pointer can hold. */
-		CMP("%p", (void *)(unsigned long)-1);
+		/* The widest value a pointer can hold. uintptr_t is the only type
+		 * that means that everywhere: unsigned long is 32 bits on Windows
+		 * and 64 on Linux and macOS, so using it here would quietly test a
+		 * different, much smaller number on one of them. */
+		CMP("%p", (void *)(uintptr_t)-1);
+		CMP("%p", (void *)(uintptr_t)((uintptr_t)-1 >> 1));
 		CMP("%p%p", (void *)1, (void *)2);
 	}
 	return (t_finish());
