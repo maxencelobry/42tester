@@ -7,33 +7,30 @@ int	main(int argc, char **argv)
 	CASE(1)
 	{
 		for (int c = '0'; c <= '9'; c++)
-			t_assert(ft_isdigit(c) != 0, "ft_isdigit('%c') returned 0", c);
+			classify("ft_isdigit", c, ft_isdigit(c), 1);
 	}
 	CASE(2)
 	{
 		const char	*letters = "abcxyzABCXYZ";
 		for (int i = 0; letters[i]; i++)
-			t_assert(ft_isdigit(letters[i]) == 0,
-				"ft_isdigit('%c') returned non-zero", letters[i]);
+			classify("ft_isdigit", letters[i], ft_isdigit(letters[i]), 0);
 	}
 	CASE(3)
 	{
 		int	edges[] = {'0' - 1, '9' + 1};
 		for (size_t i = 0; i < sizeof(edges) / sizeof(*edges); i++)
-			t_assert(ft_isdigit(edges[i]) == 0,
-				"ft_isdigit(%d) returned non-zero", edges[i]);
+			classify("ft_isdigit", edges[i], ft_isdigit(edges[i]), 0);
 	}
 	CASE(4)
 	{
 		/* A digit as a number rather than a character is a common mix-up. */
 		for (int c = 0; c <= 9; c++)
-			t_assert(ft_isdigit(c) == 0, "ft_isdigit(%d) returned non-zero", c);
+			classify("ft_isdigit", c, ft_isdigit(c), 0);
 	}
 	CASE(5)
 	{
 		for (int c = -1; c <= 255; c++)
-			t_assert(!!ft_isdigit(c) == !!isdigit(c),
-				"ft_isdigit(%d) disagrees with isdigit(%d)", c, c);
+			classify("ft_isdigit", c, ft_isdigit(c), isdigit(c) != 0);
 	}
 	return (t_finish());
 }
