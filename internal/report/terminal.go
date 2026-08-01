@@ -74,8 +74,8 @@ func Terminal(w io.Writer, r *result.Report, opts TerminalOptions) {
 				continue
 			}
 			fmt.Fprintf(w, "      %s %s\n", mark(cs.Status, opts.Color), cs.Name)
-			if cs.Detail != "" && !cs.Status.Passed() {
-				fmt.Fprint(w, indent(cs.Detail, "        "))
+			if e := cs.Explain(); e != "" {
+				fmt.Fprint(w, indent(e, "        "))
 			}
 		}
 	}

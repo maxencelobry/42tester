@@ -28,11 +28,26 @@ static T_UNUSED void	t_cmp_printf(const char *expr, int got, char *gs, size_t gl
 		return ;
 	}
 	if (gl != wl || memcmp(gs, ws, gl) != 0)
-		t_fail("ft_printf(%s) printed %s, expected %s",
-			expr, t_show(gs, gl), t_show(ws, wl));
+	{
+		char	call[256];
+		char	shown[512];
+
+		snprintf(call, sizeof(call), "ft_printf(%s), the output", expr);
+		snprintf(shown, sizeof(shown), "%s", t_show(gs, gl));
+		t_fail_cmp(call, t_show(ws, wl), shown);
+	}
 	else if (got != want)
-		t_fail("ft_printf(%s) printed the right thing but returned %d, expected %d",
-			expr, got, want);
+	{
+		char	call[256];
+		char	g[32];
+		char	w[32];
+
+		snprintf(call, sizeof(call),
+			"ft_printf(%s) printed the right thing, but its return value", expr);
+		snprintf(g, sizeof(g), "%d", got);
+		snprintf(w, sizeof(w), "%d", want);
+		t_fail_cmp(call, w, g);
+	}
 	free(gs);
 	free(ws);
 }

@@ -46,11 +46,31 @@ type Case struct {
 	Number int
 	Name   string
 	Status Status
-	// Detail explains a failure: expected vs got, the signal that killed the
-	// process, and so on. Empty when the case passed.
+	// Detail explains the failure. For a comparison it is the call that was
+	// made; otherwise it is a full sentence. Empty when the case passed.
 	Detail string
-	// Signal is set when Status is Crash.
-	Signal string
+	// Expected and Got hold the two sides of a comparison, so the report can
+	// lay them out one under the other. Both are empty for failures that are
+	// not comparisons, such as a crash.
+	Expected string
+	Got      string
+}
+
+// Comparison reports whether the failure has an expected/got pair to show.
+func (c Case) Comparison() bool {
+	return c.Expected != "" || c.Got != ""
+}
+
+// Explain renders the failure as the moulinette-style block: the call, then
+// the two values one under the other. Returns "" for a passing case.
+func (c Case) Explain() string {
+	if c.Status.Passed() || c.Status == Skipped {
+		return ""
+	}
+	if !c.Comparison() {
+		return c.Detail
+	}
+	return c.Detail + "\n  expected: " + c.Expected + "\n  got:      " + c.Got
 }
 
 // Group is one "#### <name>" section.

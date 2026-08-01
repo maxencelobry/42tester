@@ -20,6 +20,9 @@
 #  define T_UNUSED
 # endif
 
+/* Longest failure message, expected value or actual value we carry. */
+# define T_MSG_MAX 1024
+
 /* ---- lifecycle ---------------------------------------------------------- */
 
 void	t_init(int argc, char **argv);
@@ -35,6 +38,12 @@ int		t_finish(void);
 
 void	t_fail(const char *fmt, ...);
 void	t_assert(int cond, const char *fmt, ...);
+
+/* t_fail_cmp records a failure as three separate pieces: the call that was
+ * made, what it should have produced and what it did produce. The report
+ * shows them on their own lines, which is far easier to scan than a
+ * sentence. */
+void	t_fail_cmp(const char *call, const char *expected, const char *got);
 void	t_eq_ll(long long got, long long want, const char *what);
 void	t_eq_ull(unsigned long long got, unsigned long long want, const char *what);
 void	t_eq_str(const char *got, const char *want, const char *what);

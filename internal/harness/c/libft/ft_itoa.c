@@ -5,17 +5,18 @@
 static void	expect(int n)
 {
 	char	want[16];
+	char	call[32];
+	char	shown[64];
 	char	*got;
 
 	sprintf(want, "%d", n);
+	snprintf(call, sizeof(call), "ft_itoa(%d)", n);
 	got = ft_itoa(n);
-	if (got == NULL)
+	if (got == NULL || strcmp(got, want) != 0)
 	{
-		t_fail("ft_itoa(%d) returned NULL", n);
-		return ;
+		snprintf(shown, sizeof(shown), "%s", t_showz(got));
+		t_fail_cmp(call, t_showz(want), shown);
 	}
-	if (strcmp(got, want) != 0)
-		t_fail("ft_itoa(%d) gave %s, expected %s", n, t_showz(got), t_showz(want));
 	free(got);
 }
 

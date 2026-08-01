@@ -34,8 +34,6 @@
 # endif
 #endif
 
-#define T_MSG_MAX 1024
-
 /* ------------------------------------------------------------------------ */
 /* state                                                                     */
 /* ------------------------------------------------------------------------ */
@@ -46,6 +44,8 @@ static int	t_current = 0;
 static int	t_failed = 0;
 static int	t_any_failure = 0;
 static char	t_msg[T_MSG_MAX];
+static char	t_expected[T_MSG_MAX];
+static char	t_got[T_MSG_MAX];
 
 /* ------------------------------------------------------------------------ */
 /* reporting                                                                 */
@@ -131,6 +131,8 @@ int	t_case_begin(int n)
 	t_current = n;
 	t_failed = 0;
 	t_msg[0] = '\0';
+	t_expected[0] = '\0';
+	t_got[0] = '\0';
 	t_leaks_reset();
 	return (1);
 }
@@ -141,6 +143,13 @@ int	t_case_end(void)
 	{
 		t_any_failure = 1;
 		emit(t_current, "KO", t_msg);
+		/* The comparison, when there was one, follows on its own lines so
+		 * the report can lay expected against got. */
+		if (t_expected[0] != '\0' || t_got[0] != '\0')
+		{
+			emit(t_current, "EXPECTED", t_expected);
+			emit(t_current, "GOT", t_got);
+		}
 	}
 	else
 		emit(t_current, "OK", "");
@@ -183,50 +192,88 @@ void	t_assert(int cond, const char *fmt, ...)
 	va_end(ap);
 }
 
+/* The message is the call alone; the reader composes the sentence from it
+ * and the two values, so there is one source of truth for each piece. */
+void	t_fail_cmp(const char *call, const char *expected, const char *got)
+{
+	if (t_failed)
+		return ;
+	t_failed = 1;
+	snprintf(t_msg, sizeof(t_msg), "%s", call);
+	snprintf(t_expected, sizeof(t_expected), "%s", expected);
+	snprintf(t_got, sizeof(t_got), "%s", got);
+}
+
+/* cmp_ll and friends render both sides before handing them over, because
+ * t_show rotates a small pool of buffers and the caller must not hold two
+ * live results across another call. */
 void	t_eq_ll(long long got, long long want, const char *what)
 {
+	char	g[32];
+	char	w[32];
+
 	if (got == want)
 		return ;
-	t_fail("%s returned %lld, expected %lld", what, got, want);
+	snprintf(g, sizeof(g), "%lld", got);
+	snprintf(w, sizeof(w), "%lld", want);
+	t_fail_cmp(what, w, g);
 }
 
 void	t_eq_ull(unsigned long long got, unsigned long long want, const char *what)
 {
+	char	g[32];
+	char	w[32];
+
 	if (got == want)
 		return ;
-	t_fail("%s returned %llu, expected %llu", what, got, want);
+	snprintf(g, sizeof(g), "%llu", got);
+	snprintf(w, sizeof(w), "%llu", want);
+	t_fail_cmp(what, w, g);
 }
 
 void	t_eq_str(const char *got, const char *want, const char *what)
 {
+	char	g[T_MSG_MAX];
+
 	if (got == want)
 		return ;
-	if (got == NULL || want == NULL || strcmp(got, want) != 0)
-		t_fail("%s gave %s, expected %s", what, t_showz(got), t_showz(want));
+	if (got != NULL && want != NULL && strcmp(got, want) == 0)
+		return ;
+	snprintf(g, sizeof(g), "%s", t_showz(got));
+	t_fail_cmp(what, t_showz(want), g);
 }
 
 void	t_eq_mem(const void *got, const void *want, size_t n, const char *what)
 {
+	char	g[T_MSG_MAX];
+
 	if (got == NULL || want == NULL)
 	{
-		if (got != want)
-			t_fail("%s is %s, expected %s", what, t_show(got, n), t_show(want, n));
-		return ;
+		if (got == want)
+			return ;
 	}
-	if (memcmp(got, want, n) != 0)
-		t_fail("%s holds %s, expected %s", what, t_show(got, n), t_show(want, n));
+	else if (memcmp(got, want, n) == 0)
+		return ;
+	snprintf(g, sizeof(g), "%s", t_show(got, n));
+	t_fail_cmp(what, t_show(want, n), g);
 }
 
 void	t_eq_ptr(const void *got, const void *want, const char *what)
 {
-	if (got != want)
-		t_fail("%s returned %p, expected %p", what, got, want);
+	char	g[32];
+	char	w[32];
+
+	if (got == want)
+		return ;
+	snprintf(g, sizeof(g), "%p", got);
+	snprintf(w, sizeof(w), "%p", want);
+	t_fail_cmp(what, w, g);
 }
 
 void	t_not_null(const void *got, const char *what)
 {
 	if (got == NULL)
-		t_fail("%s returned NULL", what);
+		t_fail_cmp(what, "a valid pointer", "NULL");
 }
 
 /* ------------------------------------------------------------------------ */

@@ -1,36 +1,37 @@
 # 42tester
 
-A moulinette-style tester for the first three C projects of the 42 common
-core: **libft**, **ft_printf** and **get_next_line**.
+Know what the moulinette will say, before you push.
 
-It produces a report in the moulinette's own format. When everything passes,
-the file it writes is byte-for-byte identical to the real one — that is
-enforced by a test, not by hand.
-
-```
-42tester .
-```
-
-One binary. No Python, no virtualenv, no cloning a different repository per
-project. The whole C test suite is embedded in the executable.
-
-## Install
-
-Grab the binary for your machine from the releases page, or build it:
-
-```bash
-make
-```
-
-Go 1.24 or later, and a C compiler. That is all.
-
-## Use
-
-Point it at a directory and it works out what is in there:
+A tester for the first three C projects of the 42 common core — **libft**,
+**ft_printf**, **get_next_line** — that writes its report in the moulinette's
+own format. When your code passes everything, the file it produces is
+byte-for-byte identical to the real one.
 
 ```bash
 42tester .
 ```
+
+That is the whole interface. It works out which project is in the directory.
+
+---
+
+## Quick start
+
+```bash
+# macOS (Apple silicon)
+curl -L https://github.com/maxencelobry/42tester/releases/latest/download/42tester-macos-arm64 -o 42tester
+chmod +x 42tester && sudo mv 42tester /usr/local/bin/
+
+cd ~/libft && 42tester .
+```
+
+Or build it — Go 1.24 and a C compiler, nothing else:
+
+```bash
+git clone https://github.com/maxencelobry/42tester && cd 42tester && make
+```
+
+## What you get
 
 ```
 detected libft in . (libft.h, Makefile builds libft.a)
@@ -39,52 +40,84 @@ Common_Core-Project-C-Libft
   ✓ Expected files
   ✓ Allowed functions
 
-  ✗ ft_split               3/5
-      ✗ ft_split_test__#2
-        count(tab) returned 3, expected 2
-      ✗ ft_split_test__#4
-        ft_split("", ' ') returned NULL
+  ⏱ ft_split               2/5
+      ⏱ ft_split_test__#1
+        the test did not finish within 5s (infinite loop?)
+      ⏱ ft_split_test__#2
+        the test did not finish within 5s (infinite loop?)
+      ⏱ ft_split_test__#5
+        the test did not finish within 5s (infinite loop?)
+  ✗ ft_itoa                9/10
+      ✗ ft_itoa_test__#5
+        ft_itoa(-2147483648)
+          expected: "-2147483648"
+          got:      "-("
+  ✗ ft_putnbr_fd           4/5
+      ✗ ft_putnbr_fd_test__#5
+        ft_putnbr_fd(-2147483648, 1) wrote
+          expected: "-2147483648"
+          got:      "-("
 
-  FAIL  218/222
+  FAIL  217/222
 
   report: moulinette_report.md
 ```
 
-Point it at a folder holding several projects and it tests all of them in one
-go. If the guess is wrong, force it:
+That is a real run. Every failure names the call and puts expected against
+got — not `3.KO`. And note that `ft_split` looping forever cost it three test
+cases, not the run.
+
+Want the moulinette's behaviour exactly? `--stop` ends the run at the first
+failing test and cuts the report there.
+
+## Why not the tester you already know
+
+|  | 42tester | The usual ones |
+|---|---|---|
+| Install | one binary | clone a repo per project, or a Python venv |
+| Report | the moulinette's format, verified identical | a line of `1.OK 2.KO` |
+| A segfault | costs you that one test case | kills the rest of the run |
+| An infinite loop | reported as a timeout | hangs |
+| Forbidden functions | read from your compiled `.a` with `nm` | not checked |
+| Your directory | never written to except the report | build artefacts left behind |
+
+## Usage
 
 ```bash
-42tester -p printf ~/ft_printf
+42tester .                    # test whatever is here
+42tester ~/ft_printf -v       # show every test, not just failures
+42tester . --leaks            # also hunt memory leaks
+42tester -p gnl ~/some/dir    # force the project if detection is wrong
+42tester ~/42                 # a folder of projects: tests all of them
 ```
 
-### Flags
-
-| Flag | What it does |
+| Flag | |
 |---|---|
 | `-v` | List every test, not just the failures |
-| `-p <project>` | Force `libft`, `printf` or `gnl` instead of detecting |
+| `-p <project>` | Force `libft`, `printf` or `gnl` |
+| `--stop` | Stop at the first failing test and cut the report there, like the moulinette |
 | `-o <file>` | Where to write the report (default `moulinette_report.md`) |
-| `--no-report` | Do not write the markdown report at all |
-| `--json <file>` | Also write a machine-readable report, for CI |
+| `--no-report` | Do not write the report file |
+| `--json <file>` | Machine-readable report, for CI |
 | `--leaks` | Track memory leaks (Linux and macOS) |
 | `--sanitize` | Build with the address and undefined-behaviour sanitizers |
-| `--strict-alloc` | Fail tests that allocate more memory than they need |
-| `--extra` | Run the tests the moulinette does not have (see below) |
-| `--timeout` | Time limit for one test (default 5s) |
-| `-j` | How many groups to build and run at once |
+| `--strict-alloc` | Fail functions that allocate more than they need |
+| `--extra` | Run tests the moulinette does not have |
+| `--timeout` | Time limit for one test (default `5s`) |
+| `-j` | Groups to build and run at once |
+
+Exit code is 0 when everything passes, so it drops straight into CI.
 
 ## What it checks
 
-Before any test, the same two things the moulinette checks first:
+Two prerequisites first, the same ones the moulinette starts with:
 
-- **Expected files** — the header, the Makefile and at least one source.
-- **Allowed functions** — every external symbol in your `.a`, read with `nm`.
-  Reading the compiled archive rather than the source is what makes this
-  trustworthy: a forbidden `printf` cannot hide behind a macro.
+- **Expected files** — the header, the Makefile, at least one source.
+- **Allowed functions** — every external symbol in your archive, read with
+  `nm`. Because it reads the compiled code and not the source, a forbidden
+  `printf` cannot hide behind a macro or a typedef.
 
-Then one executable per test group, and one process per test case. A segfault
-in `ft_split` costs you that case, not the rest of the run. Infinite loops are
-caught by the timeout and reported as such rather than hanging the tester.
+Then the tests, one executable per group and one process per case.
 
 | Project | Groups | Cases |
 |---|---|---|
@@ -92,53 +125,64 @@ caught by the timeout and reported as such rather than hanging the tester.
 | ft_printf | 6 | 63 |
 | get_next_line | 13 | 44 |
 
-`ft_printf` is graded against your system's `printf`, output **and** return
-value. Using the C library as the reference is what makes platform-specific
-answers such as `%p` of `NULL` correct by construction.
+**ft_printf** is compared against your system's `printf` — the bytes written
+*and* the return value. Using the C library as the reference is what makes
+platform-specific answers like `%p` of `NULL` right by construction, instead
+of hard-coding one platform's answer.
 
-`get_next_line` is compiled once per `BUFFER_SIZE` the moulinette tries: 0, 1
-and 1000. `BUFFER_SIZE` 0 has to return `NULL`, not spin.
+**get_next_line** is compiled once per `BUFFER_SIZE` the moulinette uses: 0, 1
+and 1000. `BUFFER_SIZE` 0 has to return `NULL`, not spin forever.
 
-### The extra tests
+**libft** covers all 43 functions including the bonus, which is skipped
+automatically if you have not turned it in.
 
-`--extra` adds tests the real moulinette reports do not contain, but that the
-subject requires or that an evaluator will try by hand:
+### `--extra`
+
+Tests the real reports do not contain, but that the subject demands or an
+evaluator will try by hand:
 
 - `ft_printf`: `%d`, `%i`, `%u`, and formats mixing several conversions
-- `get_next_line`: several descriptors read in turn, binary content,
-  `BUFFER_SIZE` 9999
+- `get_next_line`: several file descriptors read in turn, binary content,
+  `BUFFER_SIZE 9999`
 
-They are off by default so the report stays a faithful copy of the
-moulinette's.
+Off by default, so the report stays a faithful copy.
 
-## Known limits
+### `--strict-alloc`
+
+Fails a function that asks for more memory than it needs — `ft_substr`
+allocating the whole string when it returns four characters. The moulinette
+tolerates this, so it is off by default. Turn it on to be harder on yourself
+than the correction is.
+
+## Limits, stated plainly
+
+**The failure layout is approximate.** The reports this was built from are
+all-green, so the exact markup the moulinette uses for a failing test is not
+known. What it does is: name the call, show expected against actual, and stop
+the run there. This tool does the same — that is what `--stop` is — but the
+precise wording and spacing of the `KO ❌` block are its own. The *passing*
+layout is exact and enforced by a test. If you have a real report with
+failures in it, open an issue with it and this gets pinned down.
+
+**No `%d`, `%i` or `%u` group in ft_printf.** The real report has groups only
+for `%c %s %p %x %X %%`, so that is what the default run has. The subject
+still requires the others — use `--extra`.
 
 **Windows.** Everything works except two things, both because the Microsoft C
-library differs from the one on the 42 machines:
+library differs from the ones at 42:
 
 - `%p` prints `0000000000000001` where Linux and macOS print `0x1`, so
-  `ft_printf_pointer` fails even on correct code. The tester says so when it
-  runs.
-- Leak tracking needs `dlsym`, so `--leaks` is a no-op.
+  `ft_printf_pointer` fails on correct code. The tool warns you when it does.
+- `--leaks` needs `dlsym` and is a no-op.
 
-Use WSL or a Mac for those. Everything else is trustworthy.
+Use WSL or a Mac for those two. The other 321 of the 329 cases are
+trustworthy — libft and get_next_line are unaffected.
 
-**Failure formatting.** The reports this was built from are all-green, so the
-moulinette's own layout for a failure is unknown. What you get for a failing
-test (`KO ❌` plus an explanation block) is this tool's invention. The passing
-layout is exact.
-
-**Allocation sizes.** `--strict-alloc` fails a function that asks for more
-memory than it needs — `ft_substr` allocating the whole string when it only
-returns four characters, say. The moulinette tolerates that, so it is off by
-default. Turn it on if you want to be harder on yourself than the correction
-is.
-
-## How it is put together
+## How it works
 
 ```
 cmd/42tester          the command line
-internal/spec         what each project is: files, allowed functions, groups
+internal/spec         each project: files, allowed functions, test groups
 internal/detect       working out which project a directory holds
 internal/prereq       expected files, allowed functions
 internal/build        working copy, make, one executable per group
@@ -148,11 +192,34 @@ internal/harness/c    the C test suite, embedded in the binary
 docs/moulinette       the real reports this is measured against
 ```
 
-Your directory is never written to except for the report: everything is
-compiled in a temporary copy, so a broken Makefile cannot leave object files
-behind in your repository.
+The C suite is embedded with `go:embed`, which is why there is one file to
+download. Your submission is copied to a temporary directory before `make`
+runs, and the test binaries run from a scratch directory of their own, so
+neither a broken Makefile nor a crashing test can leave anything in your repo.
 
-## Prior art
+Each group is a separate executable and each case a separate process. When a
+case dies without reporting, the runner re-runs it alone to find out whether
+it really crashed or was just downstream of one — which is how you get
+`3/5` instead of `run died`.
+
+The report format is not maintained by hand. `internal/report/markdown_test.go`
+renders an all-passing report for each project and diffs it against
+`docs/moulinette/*.md`. The odd blank lines in the renderer are load-bearing;
+tidying them fails the build.
+
+## Contributing
+
+Test cases are plain C in `internal/harness/c/`. To add one, write it and bump
+`Cases` for that group in `internal/spec/`. Anything the real moulinette does
+not run belongs in `ExtraGroups`, not `Groups` — the default report has to
+stay a copy.
+
+```bash
+make test    # includes the report-fidelity check
+make vet
+```
+
+## Credits
 
 The test cases owe a lot to [Tripouille's
 testers](https://github.com/Tripouille/libftTester), in particular the

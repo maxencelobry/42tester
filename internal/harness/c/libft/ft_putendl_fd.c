@@ -4,6 +4,7 @@ static void	wrote(const char *want, size_t want_len, const char *what)
 {
 	size_t	len;
 	char	*got = t_capture_stop(&len);
+	char	shown[T_MSG_MAX];
 
 	if (got == NULL)
 	{
@@ -11,7 +12,10 @@ static void	wrote(const char *want, size_t want_len, const char *what)
 		return ;
 	}
 	if (len != want_len || memcmp(got, want, len) != 0)
-		t_fail("%s wrote %s, expected %s", what, t_show(got, len), t_show(want, want_len));
+	{
+		snprintf(shown, sizeof(shown), "%s", t_show(got, len));
+		t_fail_cmp(what, t_show(want, want_len), shown);
+	}
 	free(got);
 }
 

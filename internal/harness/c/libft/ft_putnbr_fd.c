@@ -3,10 +3,13 @@
 static void	expect(int n)
 {
 	char	want[16];
+	char	call[40];
+	char	shown[64];
 	size_t	len;
 	char	*got;
 
 	sprintf(want, "%d", n);
+	snprintf(call, sizeof(call), "ft_putnbr_fd(%d, 1) wrote", n);
 	t_capture_start(1);
 	ft_putnbr_fd(n, 1);
 	got = t_capture_stop(&len);
@@ -16,8 +19,10 @@ static void	expect(int n)
 		return ;
 	}
 	if (len != strlen(want) || memcmp(got, want, len) != 0)
-		t_fail("ft_putnbr_fd(%d, 1) wrote %s, expected %s",
-			n, t_show(got, len), t_showz(want));
+	{
+		snprintf(shown, sizeof(shown), "%s", t_show(got, len));
+		t_fail_cmp(call, t_showz(want), shown);
+	}
 	free(got);
 }
 

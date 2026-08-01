@@ -59,7 +59,7 @@ var signals = map[string][]signal{
 var nameRule = regexp.MustCompile(`(?m)^\s*NAME\s*[:?]?=\s*(\S+)`)
 
 var archiveOwner = map[string]string{
-	"libft.a":      "libft",
+	"libft.a":       "libft",
 	"libftprintf.a": "printf",
 }
 

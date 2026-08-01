@@ -63,8 +63,10 @@ func Markdown(r *result.Report, opts MarkdownOptions) string {
 		}
 		for _, c := range g.Cases {
 			fmt.Fprintf(&b, "**%s:** %s\n", c.Name, c.Status)
-			if opts.Details && c.Detail != "" {
-				b.WriteString(detailBlock(c.Detail))
+			if opts.Details {
+				if e := c.Explain(); e != "" {
+					b.WriteString(detailBlock(e))
+				}
 			}
 			b.WriteString("\n\n")
 		}

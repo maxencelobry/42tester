@@ -26,19 +26,20 @@ import (
 var version = "dev"
 
 type flags struct {
-	project     string
-	markdown    string
-	jsonOut     string
-	verbose     bool
-	extra       bool
-	strictAlloc bool
-	leaks       bool
-	sanitize    bool
-	noColor     bool
-	noMarkdown  bool
-	timeout     time.Duration
-	jobs        int
-	showVersion bool
+	project       string
+	markdown      string
+	jsonOut       string
+	verbose       bool
+	extra         bool
+	strictAlloc   bool
+	leaks         bool
+	sanitize      bool
+	noColor       bool
+	noMarkdown    bool
+	stopAtFailure bool
+	timeout       time.Duration
+	jobs          int
+	showVersion   bool
 }
 
 func main() {
@@ -53,6 +54,7 @@ func main() {
 	flag.BoolVar(&f.sanitize, "sanitize", false, "build with the address and undefined-behaviour sanitizers")
 	flag.BoolVar(&f.noColor, "no-color", false, "disable coloured output")
 	flag.BoolVar(&f.noMarkdown, "no-report", false, "skip writing the markdown report")
+	flag.BoolVar(&f.stopAtFailure, "stop", false, "stop at the first failing test and cut the report there, like the moulinette")
 	flag.DurationVar(&f.timeout, "timeout", 5*time.Second, "time limit for a single test")
 	flag.IntVar(&f.jobs, "j", 0, "how many groups to build and run at once (default: number of cores)")
 	flag.BoolVar(&f.showVersion, "version", false, "print the version and exit")
@@ -162,23 +164,18 @@ func runOne(t target, f flags) bool {
 		fmt.Printf("testing %s in %s\n", t.project.ID, rel)
 	}
 
-	total := len(t.project.Groups)
-	if f.extra {
-		total += len(t.project.ExtraGroups)
-	}
-
 	opts := engine.Options{
-		Extra:       f.extra,
-		StrictAlloc: f.strictAlloc,
-		Leaks:       f.leaks,
-		Sanitize:    f.sanitize,
-		Timeout:     f.timeout,
-		Jobs:        f.jobs,
+		Extra:         f.extra,
+		StrictAlloc:   f.strictAlloc,
+		Leaks:         f.leaks,
+		Sanitize:      f.sanitize,
+		Timeout:       f.timeout,
+		Jobs:          f.jobs,
+		StopAtFailure: f.stopAtFailure,
 		Progress: func(done, n int, group string) {
 			fmt.Printf("\r\033[K  %d/%d  %s", done, n, group)
 		},
 	}
-	_ = total
 
 	rep, notes, err := engine.Run(t.project, t.dir, opts)
 	fmt.Print("\r\033[K")

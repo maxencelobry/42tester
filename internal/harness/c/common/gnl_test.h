@@ -103,15 +103,13 @@ static T_UNUSED void	line(int fd, const char *want, const char *what)
 	if (fd < 0)
 		return ;
 	got = get_next_line(fd);
-	if (want == NULL)
+	if (want == NULL ? got != NULL : (got == NULL || strcmp(got, want) != 0))
 	{
-		if (got != NULL)
-			t_fail("%s returned %s, expected NULL (end of file)", what, t_showz(got));
+		char	shown[T_MSG_MAX];
+
+		snprintf(shown, sizeof(shown), "%s", t_showz(got));
+		t_fail_cmp(what, want == NULL ? "NULL (end of file)" : t_showz(want), shown);
 	}
-	else if (got == NULL)
-		t_fail("%s returned NULL, expected %s", what, t_showz(want));
-	else if (strcmp(got, want) != 0)
-		t_fail("%s returned %s, expected %s", what, t_showz(got), t_showz(want));
 	free(got);
 }
 

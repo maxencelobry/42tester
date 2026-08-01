@@ -31,6 +31,11 @@ type Options struct {
 	Timeout time.Duration
 	// Jobs is how many groups are compiled and run at once.
 	Jobs int
+	// StopAtFailure halts at the first failing test and truncates the report
+	// there, the way the moulinette does. It forces the groups to run in
+	// report order, one at a time, so "first" means the same thing it does
+	// in the real report.
+	StopAtFailure bool
 	// Progress is called as groups finish, for a live display.
 	Progress func(done, total int, group string)
 }
@@ -120,6 +125,11 @@ func Run(project *spec.Project, dir string, opts Options) (*result.Report, []str
 		rep.Groups[i] = &result.Group{Spec: g}
 	}
 
+	if opts.StopAtFailure {
+		runSequentiallyUntilFailure(b, rep, hasBonus, opts)
+		return rep, notes, nil
+	}
+
 	jobs := opts.Jobs
 	if jobs <= 0 {
 		jobs = runtime.NumCPU()
@@ -155,6 +165,37 @@ func Run(project *spec.Project, dir string, opts Options) (*result.Report, []str
 	wg.Wait()
 
 	return rep, notes, nil
+}
+
+// runSequentiallyUntilFailure walks the groups in report order and stops at
+// the first test that does not pass, dropping everything after it. That is
+// what the moulinette shows: the run ends where the problem is.
+func runSequentiallyUntilFailure(b *build.Builder, rep *result.Report, hasBonus bool, opts Options) {
+	for i, rg := range rep.Groups {
+		if rg.Spec.Bonus && !hasBonus {
+			rg.Compilation = result.Skipped
+			rg.Cases = skippedCases(rg.Spec)
+			continue
+		}
+		runGroup(b, rg, opts.Timeout, b.Run)
+		if opts.Progress != nil {
+			opts.Progress(i+1, len(rep.Groups), rg.Spec.Name)
+		}
+
+		if rg.Compilation != result.OK {
+			rep.Groups = rep.Groups[:i+1]
+			return
+		}
+		for j, c := range rg.Cases {
+			if c.Status.Passed() || c.Status == result.Skipped {
+				continue
+			}
+			// Keep the failing case: it is the one the student needs to see.
+			rg.Cases = rg.Cases[:j+1]
+			rep.Groups = rep.Groups[:i+1]
+			return
+		}
+	}
 }
 
 // runGroup compiles and executes a single group.
