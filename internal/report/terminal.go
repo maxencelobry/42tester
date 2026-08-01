@@ -89,12 +89,20 @@ func Terminal(w io.Writer, r *result.Report, opts TerminalOptions) {
 	}
 
 	valid, total := r.Totals()
+	// Whatever the verdict, say how much was not looked at. Passing the
+	// mandatory part while the bonus is untouched is a pass, but it is not
+	// "everything is fine".
+	var untested string
+	if n := r.SkippedCases(); n > 0 {
+		untested = fmt.Sprintf("  %s", c(yellow, fmt.Sprintf("(%d more not turned in)", n)))
+	}
+
 	fmt.Fprintln(w)
 	if r.Success() {
-		fmt.Fprintf(w, "  %s  %d/%d\n\n", c(green+bold, "PASS"), valid, total)
+		fmt.Fprintf(w, "  %s  %d/%d%s\n\n", c(green+bold, "PASS"), valid, total, untested)
 		return
 	}
-	fmt.Fprintf(w, "  %s  %d/%d", c(red+bold, "FAIL"), valid, total)
+	fmt.Fprintf(w, "  %s  %d/%d%s", c(red+bold, "FAIL"), valid, total, untested)
 	// Passing every test while failing a prerequisite is the confusing case:
 	// say plainly that the moulinette stops there.
 	if !r.PrerequisitesOK() && valid == total {

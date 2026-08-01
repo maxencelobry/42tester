@@ -135,6 +135,21 @@ func (r *Report) PrerequisitesOK() bool {
 	return true
 }
 
+// SkippedCases counts the tests that never ran, which is how many the bonus
+// would have added. A total that silently leaves them out reads as if the
+// whole project had been graded.
+func (r *Report) SkippedCases() int {
+	n := 0
+	for _, g := range r.Groups {
+		for _, c := range g.Cases {
+			if c.Status == Skipped {
+				n++
+			}
+		}
+	}
+	return n
+}
+
 // Totals returns the number of passing cases and the number run.
 func (r *Report) Totals() (valid, total int) {
 	for _, g := range r.Groups {
