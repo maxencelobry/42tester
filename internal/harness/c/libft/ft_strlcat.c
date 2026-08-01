@@ -59,6 +59,14 @@ int	main(int argc, char **argv)
 		strcpy(dst, "abc");
 		EQ_SIZE(ft_strlcat(dst, "de", 5), 5);
 		EQ_STR(dst, "abcd");
+
+		/* A size of SIZE_MAX means "no limit". An implementation that keeps
+		 * the size in an int, or that computes dstsize - dlen before checking
+		 * the two, goes wrong right here. */
+		memset(dst, 0, 32);
+		strcpy(dst, "abc");
+		EQ_SIZE(ft_strlcat(dst, "de", (size_t)-1), 5);
+		EQ_STR(dst, "abcde");
 	}
 	return (t_finish());
 }

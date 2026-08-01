@@ -47,6 +47,12 @@ int	main(int argc, char **argv)
 		memset(exact, '#', 6);
 		EQ_SIZE(ft_strlcpy(exact, "hello", 6), 5);
 		EQ_STR(exact, "hello");
+
+		/* SIZE_MAX means "no limit"; a size kept in an int breaks here. */
+		char	big[16];
+		memset(big, '#', 16);
+		EQ_SIZE(ft_strlcpy(big, "hello", (size_t)-1), 5);
+		EQ_STR(big, "hello");
 	}
 	return (t_finish());
 }
