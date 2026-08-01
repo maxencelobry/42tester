@@ -5,17 +5,18 @@
 static void	expect(int n)
 {
 	char	want[T_DECIMAL_CHARS(int)];
-	char	call[T_DECIMAL_CHARS(int) + 16];
 	char	shown[T_DECIMAL_CHARS(int) + 16];
 	char	*got;
 
 	snprintf(want, sizeof(want), "%d", n);
-	snprintf(call, sizeof(call), "ft_itoa(%d)", n);
 	got = ft_itoa(n);
 	if (got == NULL || strcmp(got, want) != 0)
 	{
+		/* The argument goes in the input field rather than into the label,
+		 * so the failure reads the same way as every other one. */
+		t_input("%d", n);
 		snprintf(shown, sizeof(shown), "%s", t_showz(got));
-		t_fail_cmp(call, t_showz(want), shown);
+		t_fail_cmp("ft_itoa", t_showz(want), shown);
 	}
 	free(got);
 }

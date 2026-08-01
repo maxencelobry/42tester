@@ -199,10 +199,17 @@ void	t_assert(int cond, const char *fmt, ...)
 void	t_input(const char *fmt, ...)
 {
 	va_list	ap;
-	size_t	len = strlen(t_in);
+	size_t	len;
 
-	/* Several inputs in one case are listed rather than overwritten: a test
-	 * reading from two files should show both. */
+	/* Only the first failure of a case is reported, so anything recorded
+	 * after one belongs to a check nobody will see. A helper called in a
+	 * loop would otherwise pile up the inputs of every later iteration. */
+	if (t_failed)
+		return ;
+	len = strlen(t_in);
+
+	/* Several inputs before the failure are listed rather than overwritten:
+	 * a test reading from two files should show both. */
 	if (len > 0 && len + 2 < sizeof(t_in))
 	{
 		t_in[len++] = ',';

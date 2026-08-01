@@ -3,13 +3,11 @@
 static void	expect(int n)
 {
 	char	want[T_DECIMAL_CHARS(int)];
-	char	call[T_DECIMAL_CHARS(int) + 32];
 	char	shown[T_DECIMAL_CHARS(int) + 32];
 	size_t	len;
 	char	*got;
 
 	snprintf(want, sizeof(want), "%d", n);
-	snprintf(call, sizeof(call), "ft_putnbr_fd(%d, 1) wrote", n);
 	t_capture_start(1);
 	ft_putnbr_fd(n, 1);
 	got = t_capture_stop(&len);
@@ -20,8 +18,9 @@ static void	expect(int n)
 	}
 	if (len != strlen(want) || memcmp(got, want, len) != 0)
 	{
+		t_input("%d", n);
 		snprintf(shown, sizeof(shown), "%s", t_show(got, len));
-		t_fail_cmp(call, t_showz(want), shown);
+		t_fail_cmp("ft_putnbr_fd(n, 1) wrote", t_showz(want), shown);
 	}
 	free(got);
 }
