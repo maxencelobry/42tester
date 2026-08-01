@@ -49,6 +49,9 @@ type Case struct {
 	// Detail explains the failure. For a comparison it is the call that was
 	// made; otherwise it is a full sentence. Empty when the case passed.
 	Detail string
+	// Input is what the case was fed, when the call alone does not say it:
+	// the contents of a file, the string a helper was built from.
+	Input string
 	// Expected and Got hold the two sides of a comparison, so the report can
 	// lay them out one under the other. Both are empty for failures that are
 	// not comparisons, such as a crash.
@@ -68,9 +71,16 @@ func (c Case) Explain() string {
 		return ""
 	}
 	if !c.Comparison() {
-		return c.Detail
+		if c.Input == "" {
+			return c.Detail
+		}
+		return c.Detail + "\n  input:    " + c.Input
 	}
-	return c.Detail + "\n  expected: " + c.Expected + "\n  got:      " + c.Got
+	out := c.Detail
+	if c.Input != "" {
+		out += "\n  input:    " + c.Input
+	}
+	return out + "\n  expected: " + c.Expected + "\n  got:      " + c.Got
 }
 
 // Group is one "#### <name>" section.

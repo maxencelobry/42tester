@@ -46,6 +46,7 @@ static int	t_any_failure = 0;
 static char	t_msg[T_MSG_MAX];
 static char	t_expected[T_MSG_MAX];
 static char	t_got[T_MSG_MAX];
+static char	t_in[T_MSG_MAX];
 
 /* ------------------------------------------------------------------------ */
 /* reporting                                                                 */
@@ -133,6 +134,7 @@ int	t_case_begin(int n)
 	t_msg[0] = '\0';
 	t_expected[0] = '\0';
 	t_got[0] = '\0';
+	t_in[0] = '\0';
 	t_leaks_reset();
 	return (1);
 }
@@ -143,6 +145,8 @@ int	t_case_end(void)
 	{
 		t_any_failure = 1;
 		emit(t_current, "KO", t_msg);
+		if (t_in[0] != '\0')
+			emit(t_current, "INPUT", t_in);
 		/* The comparison, when there was one, follows on its own lines so
 		 * the report can lay expected against got. */
 		if (t_expected[0] != '\0' || t_got[0] != '\0')
@@ -189,6 +193,24 @@ void	t_assert(int cond, const char *fmt, ...)
 		return ;
 	va_start(ap, fmt);
 	record(fmt, ap);
+	va_end(ap);
+}
+
+void	t_input(const char *fmt, ...)
+{
+	va_list	ap;
+	size_t	len = strlen(t_in);
+
+	/* Several inputs in one case are listed rather than overwritten: a test
+	 * reading from two files should show both. */
+	if (len > 0 && len + 2 < sizeof(t_in))
+	{
+		t_in[len++] = ',';
+		t_in[len++] = ' ';
+		t_in[len] = '\0';
+	}
+	va_start(ap, fmt);
+	vsnprintf(t_in + len, sizeof(t_in) - len, fmt, ap);
 	va_end(ap);
 }
 

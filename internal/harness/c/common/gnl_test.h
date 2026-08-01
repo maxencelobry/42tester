@@ -75,6 +75,9 @@ static T_UNUSED int	open_content(const void *data, size_t len)
 	}
 	g_open_fds[slot] = fd;
 	g_file_count++;
+	/* The failure will name a line, not the file, so record what the file
+	 * held. t_show truncates, which keeps a 100000 byte line readable. */
+	t_input("a file holding %s", t_show(data, len));
 	return (fd);
 }
 

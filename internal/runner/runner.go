@@ -52,6 +52,7 @@ func (r *Runner) RunGroup(exe string, g spec.Group) []result.Case {
 		if c, ok := reported[i+1]; ok {
 			cases[i].Status = c.status
 			cases[i].Detail = c.detail
+			cases[i].Input = c.input
 			cases[i].Expected = c.expected
 			cases[i].Got = c.got
 		} else {
@@ -72,6 +73,7 @@ func (r *Runner) RunGroup(exe string, g spec.Group) []result.Case {
 		if c, ok := single[i+1]; ok {
 			cases[i].Status = c.status
 			cases[i].Detail = c.detail
+			cases[i].Input = c.input
 			cases[i].Expected = c.expected
 			cases[i].Got = c.got
 			continue
@@ -91,6 +93,7 @@ func (r *Runner) RunGroup(exe string, g spec.Group) []result.Case {
 type reportedCase struct {
 	status   result.Status
 	detail   string
+	input    string
 	expected string
 	got      string
 }
@@ -120,10 +123,12 @@ func (r *Runner) invoke(exe string, args ...string) (map[int]reportedCase, bool)
 // parse reads the protocol lines the harness writes to stderr:
 //
 //	@@CASE <n> <OK|KO|CRASH> <one-line explanation>
+//	@@CASE <n> INPUT <what the case was fed>
 //	@@CASE <n> EXPECTED <value>
 //	@@CASE <n> GOT <value>
 //
-// The last two are optional and only follow a failing comparison.
+// The last three are optional: INPUT appears when the test declared one, and
+// EXPECTED/GOT only follow a failing comparison.
 func parse(out string) map[int]reportedCase {
 	cases := map[int]reportedCase{}
 	for _, line := range strings.Split(out, "\n") {
@@ -146,6 +151,8 @@ func parse(out string) map[int]reportedCase {
 
 		c := cases[n]
 		switch parts[1] {
+		case "INPUT":
+			c.input = value
 		case "EXPECTED":
 			c.expected = value
 		case "GOT":

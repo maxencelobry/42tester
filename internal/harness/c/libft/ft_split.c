@@ -27,6 +27,9 @@ int	main(int argc, char **argv)
 
 	CASE(1)
 	{
+		/* The assertions below look at the array, so the string that
+		 * produced it has to be recorded separately. */
+		t_input("ft_split(\"hello world 42\", ' ')");
 		char	**tab = ft_split("hello world 42", ' ');
 		NOT_NULL(tab);
 		if (tab)
@@ -45,6 +48,7 @@ int	main(int argc, char **argv)
 	CASE(2)
 	{
 		/* Repeated, leading and trailing separators produce no empty words. */
+		t_input("ft_split(\"  hello   world  \", ' ')");
 		char	**tab = ft_split("  hello   world  ", ' ');
 		NOT_NULL(tab);
 		if (tab)
@@ -61,6 +65,7 @@ int	main(int argc, char **argv)
 	}
 	CASE(3)
 	{
+		t_input("ft_split(\"tripouille\", ' ')");
 		char	**tab = ft_split("tripouille", ' ');
 		NOT_NULL(tab);
 		if (tab)
@@ -75,6 +80,7 @@ int	main(int argc, char **argv)
 	CASE(4)
 	{
 		/* An empty input gives an array holding only the NULL terminator. */
+		t_input("ft_split(\"\", ' ')");
 		char	**tab = ft_split("", ' ');
 		NOT_NULL(tab);
 		if (tab)
@@ -86,6 +92,7 @@ int	main(int argc, char **argv)
 	}
 	CASE(5)
 	{
+		t_input("ft_split(\"     \", ' ')");
 		char	**tab = ft_split("     ", ' ');
 		NOT_NULL(tab);
 		if (tab)

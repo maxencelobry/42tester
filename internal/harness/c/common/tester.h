@@ -44,6 +44,12 @@ void	t_assert(int cond, const char *fmt, ...);
  * shows them on their own lines, which is far easier to scan than a
  * sentence. */
 void	t_fail_cmp(const char *call, const char *expected, const char *got);
+
+/* t_input names what the case was fed, for the times the call alone does not
+ * say it: the contents of a file, the string a helper was built from. It is
+ * shown above expected and got. Calling it more than once in a case appends,
+ * so a test working on several inputs lists them all. */
+void	t_input(const char *fmt, ...);
 void	t_eq_ll(long long got, long long want, const char *what);
 void	t_eq_ull(unsigned long long got, unsigned long long want, const char *what);
 void	t_eq_str(const char *got, const char *want, const char *what);
