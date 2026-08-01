@@ -37,6 +37,7 @@ type flags struct {
 	noColor     bool
 	noMarkdown  bool
 	runAll      bool
+	noBonus     bool
 	timeout     time.Duration
 	jobs        int
 	showVersion bool
@@ -55,6 +56,7 @@ func main() {
 	flag.BoolVar(&f.noColor, "no-color", false, "disable coloured output")
 	flag.BoolVar(&f.noMarkdown, "no-report", false, "skip writing the markdown report")
 	flag.BoolVar(&f.runAll, "all", false, "keep going after a failure instead of stopping there like the moulinette")
+	flag.BoolVar(&f.noBonus, "no-bonus", false, "do not fail when the bonus is missing; skip those tests instead")
 	flag.DurationVar(&f.timeout, "timeout", 5*time.Second, "time limit for a single test")
 	flag.IntVar(&f.jobs, "j", 0, "how many groups to build and run at once (default: number of cores)")
 	flag.BoolVar(&f.showVersion, "version", false, "print the version and exit")
@@ -172,6 +174,7 @@ func runOne(t target, f flags) bool {
 		Timeout:     f.timeout,
 		Jobs:        f.jobs,
 		RunAll:      f.runAll,
+		NoBonus:     f.noBonus,
 		Progress: func(done, n int, group string) {
 			fmt.Printf("\r\033[K  %d/%d  %s", done, n, group)
 		},

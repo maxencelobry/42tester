@@ -140,17 +140,17 @@ func (b *Builder) BuildBonus() bool {
 	if b.Project.Library == "" || b.Tool.Make == "" {
 		return false
 	}
-	if !b.hasMakeTarget("bonus") {
+	if !b.HasMakeTarget("bonus") {
 		return false
 	}
 	_, err := b.Make("bonus")
 	return err == nil
 }
 
-// hasMakeTarget looks for a rule in the Makefile. Parsing the file is cruder
+// HasMakeTarget looks for a rule in the Makefile. Parsing the file is cruder
 // than asking make, but `make -n bonus` on a Makefile without that rule
 // prints an error we would have to parse anyway.
-func (b *Builder) hasMakeTarget(target string) bool {
+func (b *Builder) HasMakeTarget(target string) bool {
 	for _, name := range []string{"Makefile", "makefile", "GNUmakefile"} {
 		data, err := os.ReadFile(filepath.Join(b.Src, name))
 		if err != nil {

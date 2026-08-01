@@ -35,6 +35,11 @@ type Options struct {
 	// moulinette stops, so that is the default; this is for when you would
 	// rather see everything that is broken in one pass.
 	RunAll bool
+	// NoBonus drops the bonus groups instead of failing them. The report we
+	// mirror lists them, so a submission without them does not match it and
+	// the default is to say so; this is for turning in the mandatory part
+	// alone on purpose.
+	NoBonus bool
 	// Progress is called as groups finish, for a live display.
 	Progress func(done, total int, group string)
 }
@@ -108,6 +113,7 @@ func Run(project *spec.Project, dir string, opts Options) (*result.Report, []str
 	}
 
 	hasBonus := b.BuildBonus()
+	bonusReason := missingBonusReason(b, hasBonus)
 
 	// The allowed-functions check reads the archive, so it can only run once
 	// `make` has produced it.
@@ -125,7 +131,7 @@ func Run(project *spec.Project, dir string, opts Options) (*result.Report, []str
 	}
 
 	if !opts.RunAll {
-		runUntilFailure(b, rep, hasBonus, opts)
+		runUntilFailure(b, rep, hasBonus, bonusReason, opts)
 		return rep, notes, nil
 	}
 
@@ -147,8 +153,7 @@ func Run(project *spec.Project, dir string, opts Options) (*result.Report, []str
 
 			rg := rep.Groups[i]
 			if rg.Spec.Bonus && !hasBonus {
-				rg.Compilation = result.Skipped
-				rg.Cases = skippedCases(rg.Spec)
+				markBonusMissing(rg, bonusReason, opts.NoBonus)
 			} else {
 				runGroup(b, rg, opts.Timeout, b.Run)
 			}
@@ -172,8 +177,8 @@ func Run(project *spec.Project, dir string, opts Options) (*result.Report, []str
 //
 // Compilation still happens in parallel up front, because it is the slow
 // part and it does not change where the first failure lands.
-func runUntilFailure(b *build.Builder, rep *result.Report, hasBonus bool, opts Options) {
-	compiled := compileAll(b, rep, hasBonus, opts)
+func runUntilFailure(b *build.Builder, rep *result.Report, hasBonus bool, bonusReason string, opts Options) {
+	compiled := compileAll(b, rep, hasBonus, bonusReason, opts)
 
 	for i, rg := range rep.Groups {
 		if rg.Compilation == result.Skipped {
@@ -204,7 +209,7 @@ func runUntilFailure(b *build.Builder, rep *result.Report, hasBonus bool, opts O
 // compileAll builds every group at once and returns the executables, indexed
 // like rep.Groups. A group that fails to build has its status set here and an
 // empty path.
-func compileAll(b *build.Builder, rep *result.Report, hasBonus bool, opts Options) []string {
+func compileAll(b *build.Builder, rep *result.Report, hasBonus bool, bonusReason string, opts Options) []string {
 	jobs := opts.Jobs
 	if jobs <= 0 {
 		jobs = runtime.NumCPU()
@@ -218,8 +223,7 @@ func compileAll(b *build.Builder, rep *result.Report, hasBonus bool, opts Option
 	for i := range rep.Groups {
 		rg := rep.Groups[i]
 		if rg.Spec.Bonus && !hasBonus {
-			rg.Compilation = result.Skipped
-			rg.Cases = skippedCases(rg.Spec)
+			markBonusMissing(rg, bonusReason, opts.NoBonus)
 			continue
 		}
 		wg.Add(1)
@@ -266,6 +270,39 @@ func runGroup(b *build.Builder, rg *result.Group, timeout time.Duration, runDir 
 	rg.Compilation = result.OK
 	rg.CompileLog = log
 	rg.Cases = runner.New(timeout, runDir).RunGroup(exe, rg.Spec)
+}
+
+// missingBonusReason explains, in terms the student can act on, why the bonus
+// groups cannot run. It returns "" when the bonus is there.
+func missingBonusReason(b *build.Builder, hasBonus bool) string {
+	if hasBonus {
+		return ""
+	}
+	switch {
+	case !b.HasMakeTarget("bonus"):
+		return "the Makefile has no `bonus` rule, so the ft_lst* functions are never compiled into " +
+			b.Project.Library + "\nadd one, and make sure it builds the bonus sources"
+	default:
+		return "`make bonus` did not put the ft_lst* functions into " + b.Project.Library +
+			"\ncheck that the bonus sources are listed and that they compile"
+	}
+}
+
+// markBonusMissing fills in a bonus group that could not be built. The report
+// this tool mirrors lists those groups, so by default their absence is a
+// failure rather than something to pass over in silence.
+func markBonusMissing(rg *result.Group, reason string, noBonus bool) {
+	rg.Cases = skippedCases(rg.Spec)
+	if noBonus {
+		rg.Compilation = result.Skipped
+		return
+	}
+	rg.Compilation = result.KO
+	rg.CompileLog = reason
+	for i := range rg.Cases {
+		rg.Cases[i].Status = result.KO
+		rg.Cases[i].Detail = reason
+	}
 }
 
 func skippedCases(g spec.Group) []result.Case {
