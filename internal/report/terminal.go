@@ -55,6 +55,14 @@ func Terminal(w io.Writer, r *result.Report, opts TerminalOptions) {
 			continue
 		}
 
+		if skipped(g) {
+			if opts.Verbose {
+				fmt.Fprintf(w, "  %s %-22s %s\n", mark(result.Skipped, opts.Color), g.Spec.Name,
+					c(dim, "not turned in"))
+			}
+			continue
+		}
+
 		line := fmt.Sprintf("  %s %-22s %d/%d", mark(groupStatus(g), opts.Color), g.Spec.Name, valid, total)
 		switch {
 		case g.Compilation != result.OK && g.Compilation != result.Skipped:
@@ -99,6 +107,11 @@ func groupStatus(g *result.Group) result.Status {
 	if g.Compilation != result.OK && g.Compilation != result.Skipped {
 		return g.Compilation
 	}
+	// A group nobody ran is skipped, not passing. Reporting it as a tick
+	// next to "0/5" reads as five failures that somehow succeeded.
+	if skipped(g) {
+		return result.Skipped
+	}
 	worst := result.OK
 	for _, c := range g.Cases {
 		if c.Status != result.OK && c.Status != result.Skipped {
@@ -106,6 +119,16 @@ func groupStatus(g *result.Group) result.Status {
 		}
 	}
 	return worst
+}
+
+// skipped reports whether no case of the group was actually run.
+func skipped(g *result.Group) bool {
+	for _, c := range g.Cases {
+		if c.Status != result.Skipped {
+			return false
+		}
+	}
+	return true
 }
 
 func mark(s result.Status, color bool) string {
